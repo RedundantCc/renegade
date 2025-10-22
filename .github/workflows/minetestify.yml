@@ -19,6 +19,14 @@ jobs:
             parent_dir="$(basename "$(dirname "$(realpath "$file")")")"
             sed -i "s/^[[:space:]]*title[[:space:]]*=[[:space:]]*.*/title = $parent_dir/" "$(realpath "$file")"
           done
+
+      - name: Run Checks For Each init.lua File
+        run: |
+         find . -type f -regex '.*init\.lua$' -print0 | while IFS= read -r -d '' file; do
+            echo "Processing: "$(realpath "$file")""
+            parent_dir="$(basename "$(dirname "$(realpath "$file")")")"
+            touch $parent_dir.lua
+          done
         
       - name: Run Cfg Files
         run: |
