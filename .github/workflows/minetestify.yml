@@ -1,0 +1,51 @@
+name: Rebuild Luanti Repository
+
+on:
+  push:
+permissions:
+  contents: write
+jobs:
+  minetestify:
+    runs-on: ubuntu-latest
+    env:
+      GHS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Run Checks For Each *.conf File
+        run: |
+          find . -type f -regex '.*\.conf$' -print0 | while IFS= read -r -d '' file; do
+            echo "Processing: "$(realpath "$file")""
+            parent_dir="$(basename "$(dirname "$(realpath "$file")")")"
+            sed -i "s/^[[:space:]]*title[[:space:]]*=[[:space:]]*.*/title = $parent_dir/" "$(realpath "$file")"
+          done
+        
+      - name: Run Cfg Files
+        run: |
+          if [ "$(date +%Y)" = "2025" ]; then
+            find . -type f -regex '.*\.cfg$' -print0 | while IFS= read -r -d '' file; do
+              real_dir="$(realpath "$file")"
+              pushd $(dirname "$real_dir")
+              echo "====    ====    ====    ====    ===="
+              echo "||| Processing: $real_dir"
+              : echo "||As:$GHS_TOKEN" | sed 's/./& /g'
+              : echo "||As: ghs_${GHS_TOKEN:4}"
+              echo "====    ====    ====    ====    ===="
+              bash "$real_dir"
+              echo 
+              echo "====    ====    ====    ====    ===="
+              echo "====    ====    ====    ====    ===="
+              popd
+            done
+          fi
+      - name: Commit Files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+          git add -A
+          git commit -m "Commit Files" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }}
+
