@@ -198,9 +198,9 @@ testTable.self = testTable -- Create circular reference
 --REM log(library["serialize"](testTable))
 assert(library["serialize"](testTable) == "{a=\"ah\",bar={\"foo\",2},c={false=true,level=\"yes\"},self=\"<circular>\"}")
 
--- Update a file only if its contents differ from the new content
+--niego dar más detalles.
 library["escribearchivo"] = library["annotate"]({
-	description = ""
+	description = "Update a file only if its contents differ from the new content"
 }, function(filepath, content)
 	if false then return nil end --TODO:block writes for testing
 	if content == nil then
