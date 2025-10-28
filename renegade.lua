@@ -22,7 +22,6 @@ end
 local modname, modpath, DIR_DELIM = library.getmoddata("renegade")
 
 --[[ ===    manpage methods    === ]] --
-
 local annotate_docs = {
 	description =
 	"Injects annotation wrappers around functions by automatically detecting function names and signatures. This function depends on debug.getinfo and may fail over to returning unwrapped or unsigned functions as a fallback in non-standard environments.",
@@ -65,7 +64,9 @@ local annotate = function(doc, fn)
 	})
 end
 library["annotate"] = annotate(annotate_docs, annotate)
---print(library["annotate"]:documentation())
+annotate = function() error("use global version", 2) end
+--REM print(library["annotate"]:documentation())
+
 --[[ === === == logging == === === ]] --
 library["INIT"] = INIT and INIT:lower():gsub("^game$", "server") or "lua"
 library["log"] = library["log"] or library["annotate"]({
@@ -90,5 +91,6 @@ library["log"] = library["log"] or library["annotate"]({
 		print("" .. table.concat(args, " "))
 end) --TODO:handle array conversion properly
 local log = library["log"]
---log("test", 0, { "1", 2 })
+--REM log("test", 0, { "1", 2 })
+
 --[[ === === ==  index  == === === ]] --
