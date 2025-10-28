@@ -67,12 +67,28 @@ end
 library["annotate"] = annotate(annotate_docs, annotate)
 --print(library["annotate"]:documentation())
 --[[ === === == logging == === === ]] --
-library["log"] = library["annotate"]({
+library["INIT"] = INIT and INIT:lower():gsub("^game$", "server") or "lua"
+library["log"] = library["log"] or library["annotate"]({
 	description =
 	"A simplified cross-context logging function, designed to output quick debug messages before the actual logging function is loaded into memory. This function's definition should always yield to an existing version, preventing loss of state during hot reloading.",
-	params = { "string:content" },
+	params = { "any:..." },
 	returns = "nil"
-}, function(content)
+}, function(...)
+	local info = debug and debug.getinfo and debug.getinfo(2, "Sl") or
+		{ short_src = "", currentline = -1 } -- Level 2: caller of log()
+	local args = { ... }
+	for i = 1, #args do
+		args[i] = tostring(args[i])
+	end
+	--if debug is unfucked inject with debug info, removed due to inconsistencies between server and csm output
+	-- local _ = debug and debug.getinfo and table.insert(args, 1, string.format("[%s:%d]", info.short_src, info.currentline))
+	--inject xsm type
 
-end)
+	table.insert(args, 1, "[" .. library["INIT"]:upper() .. "]: ")
+	local errorlevel = "error"
+	local _ = minetest and (minetest.log(errorlevel, table.concat(args, " ")) or true) or
+		print("" .. table.concat(args, " "))
+end) --TODO:handle array conversion properly
+local log = library["log"]
+--log("test", 0, { "1", 2 })
 --[[ === === ==  index  == === === ]] --
