@@ -94,3 +94,150 @@ local log = library["log"]
 --REM log("test", 0, { "1", 2 })
 
 --[[ === === ==  index  == === === ]] --
+local get_folders = true
+local get_files = false
+library["index"] = library["annotate"]({
+	description =
+	"Index attempts to write index files containing a list of the files and folders for a given directory using minetest.get_dir or LuaFileSystem to index and io.* to write. Returns using the disc cache regardless of successful write. Is scheduled for potential breakages during luanti 2.0.0 upgrades.",
+}, function(path, recursive)
+	--patch function parameters and env
+	if type(path) == "nil" then error("must provide valid path", 2) end
+	recursive = recursive and true or false
+	--TODO:add suport for std:environment
+	--if not minetest then error("must be called by minetest", 0) end
+	if minetest and not minetest.get_dir_list then return library["getindex"](path) end -- if is minetest but not has minetest.get_dir_list then is csm_restriction_flag_io and noop+return
+	-- List all entries in the mod directory
+	local nodelist = minetest and
+		{ files = minetest.get_dir_list(path, get_files), folders = minetest.get_dir_list(path, get_folders) } or
+		library["getindex"](path)
+	local nodestri = "return " .. library["serialize"](nodelist)
+	library["escribearchivo"](path .. DIR_DELIM .. "¯.lua", nodestri)
+	--loop thu folders if parameter[2] == bool:true
+	if recursive then
+		for _, __ in ipairs(nodelist.folders) do
+			--this does not save the return and only creates indexes, as this function can only return one value to the caller
+			library["index"](path .. DIR_DELIM .. __, recursive)
+			--TODO: return nil if recursive true to make usage clear.
+		end
+	end
+	--return the contents of the newly written file
+	return library["getindex"](path)
+end)
+
+library["getindex"] = library["annotate"]({
+	description = "Returns the results of running index against a directory path."
+}, function(path)
+	return dofile(path .. DIR_DELIM .. "¯.lua")
+end)
+
+library["serialize"] = library["annotate"]({
+	description = "Performs serialization on milk"
+}, function(milk)
+	local seen = {}
+	local function quoteStr(str)
+		return '"' .. str:gsub('\\', '\\\\'):gsub('"', '\\"') .. '"'
+	end
+	local function formatKey(key)
+		if type(key) == "string" and key:match("^[%a_][%w_]*$") then
+			return key
+		else
+			return "[" .. quoteStr(tostring(key)) .. "]"
+		end
+	end
+	local function formatValue(value, path)
+		local var = type(value)
+		if var == "string" then
+			return quoteStr(value)
+		elseif var == "boolean" or var == "number" then
+			return tostring(value)
+		elseif var == "table" then
+			return serializeTable(value, path)
+		else
+			return '"<unsupported>"'
+		end
+	end
+	local function isArray(param)
+		local i = 1
+		for _ in pairs(param) do
+			if param[i] == nil then return false end
+			i = i + 1
+		end
+		return true
+	end
+	function serializeTable(tab, path)
+		if seen[tab] then
+			return '"<circular>"'
+		end
+		seen[tab] = true
+		path = path or {}
+		local parts = {}
+		local keys = {}
+		for k in pairs(tab) do table.insert(keys, k) end
+		table.sort(keys, function(a, b)
+			return tostring(a) < tostring(b)
+		end)
+		if isArray(tab) then
+			for i = 1, #tab do
+				table.insert(parts, formatValue(tab[i], path))
+			end
+		else
+			for _, k in ipairs(keys) do
+				local v = tab[k]
+				table.insert(parts, formatKey(k) .. "=" .. formatValue(v, path))
+			end
+		end
+		return "{" .. table.concat(parts, ",") .. "}"
+	end
+
+	return serializeTable(milk)
+end)
+
+
+local testTable = { a = "ah", bar = { "foo", 2 }, c = { level = "yes", ["false"] = true }, self = nil }
+testTable.self = testTable -- Create circular reference
+--REM log(library["serialize"](testTable))
+assert(library["serialize"](testTable) == "{a=\"ah\",bar={\"foo\",2},c={false=true,level=\"yes\"},self=\"<circular>\"}")
+
+-- Update a file only if its contents differ from the new content
+library["escribearchivo"] = library["annotate"]({
+	description = ""
+}, function(filepath, content)
+	if false then return nil end --TODO:block writes for testing
+	if content == nil then
+		local success, err = os.remove(filepath)
+		if not success then
+			local info = debug.getinfo(2, "Sl") -- 2 = caller of this function
+			log("Failed to deallocate file: " .. err .. ", " .. info.short_src .. ":" .. info.currentline .. "")
+			return false, err
+		end
+		return
+	end
+	-- Read current content as old_content
+	local old_content = ""
+	local f = io.open(filepath, "r")
+	if f then
+		old_content = f:read("*a")
+		f:close()
+	end
+	-- Compare old_content and new_content write if has difference
+	if old_content ~= content then
+		f = io.open(filepath, "w")
+		if f then
+			f:write(content)
+			f:close()
+			return true                -- Indicates changes were written
+		else
+			local info = debug.getinfo(2, "Sl") -- 2 = caller of this function
+			log("Failed to overwrite file, cannot open for writing: \"" ..
+				filepath .. "\" " .. info.short_src .. ":" .. info.currentline)
+			return false, err
+		end
+	end
+	return false -- No changes made
+end)
+
+library["index"](modpath, false)
+library["index"](modpath .. DIR_DELIM .. "src", true)
+--[[ === === == dofiles == === === ]] --
+-- dopath, executes every file in the top most directory of the provided path. For each file in this directory, dofile will be called and the return type evaluated. If the return type is a function it will be executed using any extra arguments [...] as it's calling arguments, if it is a string or array of strings<>TYPE(TABLE), it will be executed as a secondary file lookup, the value is returned as is otherwise.
+--local _ = library["INIT"] ~= "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. library["INIT"]) --load context library file
