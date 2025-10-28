@@ -20,3 +20,5 @@ library["getmoddata"] = function(modname)
 	return cache[modname .. "_modname"], cache[modname .. "_modpath"], DIR_DELIM or modpath:match("[\\/]") or "/"
 end
 local modname, modpath, DIR_DELIM = library.getmoddata("renegade")
+
+--[[ ===    manpage methods    === ]] --
