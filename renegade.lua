@@ -22,3 +22,57 @@ end
 local modname, modpath, DIR_DELIM = library.getmoddata("renegade")
 
 --[[ ===    manpage methods    === ]] --
+
+local annotate_docs = {
+	description =
+	"Injects annotation wrappers around functions by automatically detecting function names and signatures. This function depends on debug.getinfo and may fail over to returning unwrapped or unsigned functions as a fallback in non-standard environments.",
+	params = { "[documentation: table<description:string, params:string, returns:string>]", "func: function" },
+	returns = "function: function with a meta table"
+}
+local annotate = function(doc, fn)
+	if type(doc) == "function" then
+		fn = doc
+		doc = {}
+	end
+	local info = debug and debug.getinfo and debug.getinfo(fn, "S")
+	local wrapper = {
+		fn = fn,
+		meta = {
+			source = info and info.short_src,
+			line = info and info.linedefined,
+			doc = doc
+		}
+	}
+	return setmetatable(wrapper, {
+		__call = function(t, ...)
+			return t.fn(...)
+		end,
+		__tostring = function(t)
+			if t.meta.source and t.meta.line then
+				return "Function@" .. t.meta.source .. ":" .. t.meta.line
+			else
+				return "Function!!Debug info unavailable!!"
+			end
+		end,
+		__index = function(t, k)
+			if k == "documentation" then
+				return function(self)
+					return self.meta.doc
+				end
+			end
+			return t.meta[k]
+		end
+	})
+end
+library["annotate"] = annotate(annotate_docs, annotate)
+--print(library["annotate"]:documentation())
+--[[ === === == logging == === === ]] --
+library["log"] = library["annotate"]({
+	description =
+	"A simplified cross-context logging function, designed to output quick debug messages before the actual logging function is loaded into memory. This function's definition should always yield to an existing version, preventing loss of state during hot reloading.",
+	params = { "string:content" },
+	returns = "nil"
+}, function(content)
+
+end)
+--[[ === === ==  index  == === === ]] --
