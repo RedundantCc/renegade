@@ -236,8 +236,51 @@ library["escribearchivo"] = library["annotate"]({
 	return false -- No changes made
 end)
 
+-- create index of nodes in the file system on startup, or fallback to existing build on load from csm/raw lua
 library["index"](modpath, false)
 library["index"](modpath .. DIR_DELIM .. "src", true)
+
 --[[ === === == dofiles == === === ]] --
--- dopath, executes every file in the top most directory of the provided path. For each file in this directory, dofile will be called and the return type evaluated. If the return type is a function it will be executed using any extra arguments [...] as it's calling arguments, if it is a string or array of strings<>TYPE(TABLE), it will be executed as a secondary file lookup, the value is returned as is otherwise.
---local _ = library["INIT"] ~= "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. library["INIT"]) --load context library file
+library["dopath"] = library["annotate"]({
+		description =
+			"Executes function for every file in the top most directory of the provided path. " ..
+			"For each file in this directory, the provided function or dofile will be called and the return type evaluated. " ..
+			"If the return type is a function it will be executed using any extra arguments [...] as it's calling arguments, " ..
+			--"if it is a string or array of strings<>TYPE(TABLE), it will be executed as a secondary file lookup, " ..
+			"the value is returned as is otherwise."
+	},
+	function(path, fn, ext, ...)
+		ext = ext or ".lua"
+		fn = fn or dofile
+		local _ = path ~= nil or error("")
+		for _, v in library["spairs"](library.index(path).files) do
+			if v:match(ext:gsub("(%p)", "%%%1") .. "$") ~= nil and v ~= "¯.lua" then
+				local returns = fn(path .. DIR_DELIM .. v)
+				if type(returns) == "function" then
+					return returns(library, ...)
+				else
+					return returns
+				end
+			end
+		end
+	end)
+
+library["spairs"] = function(tab)
+	local tabcopy = {}
+	for k, v in ipairs(tab) do
+		tabcopy[k] = v
+	end
+	table.sort(tabcopy)
+	local i = 0
+	return function()
+		i = i + 1
+		return tabcopy[i] and i, tabcopy[i]
+	end
+end
+--load cross side mods / shared lib
+library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. "shared", dofile, ".lua")
+--load non-xsm mods
+local _ = library["INIT"] ~= "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. library["INIT"])
+--if runing in raw lua, build docs
+local _ = library["INIT"] == "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. "build")
+--[[ === === === end = === === === ]] --
