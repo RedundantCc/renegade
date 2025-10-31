@@ -6,18 +6,21 @@ library["usecache"] = library["cache"] or function(get, set)
 	return cache[get]                 -- can return null
 end
 --[[ === ====   moddata   ==== === ]] --
-library["getmoddata"] = function(modname)
+library["getmoddata"] = function(modguid)
 	local caller = (debug and debug.getinfo and debug.getinfo(2, "n").name) or (debug and debug.getinfo and "global") or
-		modname -- this may result in undefined/untested behavior on_error if called from the global scope, is probably fine.
-	assert(type(modname) == "string" and #modname > 0,
+		modguid -- this may result in undefined/untested behavior on_error if called from the global scope, is probably fine.
+	assert(type(modguid) == "string" and #modguid > 0,
 		"Erroneous call in '" .. caller .. "': value must be a string of len > 0")
-	local modname = minetest and core.get_current_modname() or
+
+	local modname = cache[modguid .. "_modname"] or minetest and core.get_current_modname() or
 		debug.getinfo(2, "S").source:gsub("^@", ""):match("^[%.%/\\]*(.-)[/\\][^/\\]*$")
-	local modpath = minetest and core.get_modpath(core.get_current_modname()) or
+	local modpath = cache[modguid .. "_modpath"] or minetest and core.get_modpath(core.get_current_modname()) or
 		debug.getinfo(2, "S").source:gsub("^@", ""):match("^(.*)[/\\][^/\\]*$")
-	cache[modname .. "_modname"] = modname
-	cache[modname .. "_modpath"] = modpath
+
+	cache[modguid .. "_modname"] = modname
+	cache[modguid .. "_modpath"] = modpath
 	local DIR_DELIM = DIR_DELIM or modpath and modpath:match("[\\/]") or "/"
+
 	assert(modname ~= nil and modname ~= nil) -- and DIR_DELIM ~= nil
 	return cache[modname .. "_modname"], cache[modname .. "_modpath"], DIR_DELIM
 end
@@ -255,16 +258,18 @@ library["dopath"] = library["annotate"]({
 		ext = ext or ".lua"
 		fn = fn or dofile
 		local _ = path ~= nil or error("")
+		local returns = {}
 		for _, v in library["spairs"](library.index(path).files) do
 			if v:match(ext:gsub("(%p)", "%%%1") .. "$") ~= nil and v ~= "¯.lua" then
-				local returns = fn(path .. DIR_DELIM .. v)
-				if type(returns) == "function" then
-					return returns(library, ...)
+				local funk = fn(path .. DIR_DELIM .. v)
+				if type(funk) == "function" then
+					returns[v] = funk(...)
 				else
-					return returns
+					returns[v] = funk
 				end
 			end
 		end
+		return returns
 	end)
 
 library["spairs"] = function(tab)
@@ -279,10 +284,14 @@ library["spairs"] = function(tab)
 		return tabcopy[i] and i, tabcopy[i]
 	end
 end
+local srcpath = modpath .. DIR_DELIM .. "src" .. DIR_DELIM
 --load cross side mods / shared lib
-library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. "shared", dofile, ".lua")
+library["dopath"](srcpath .. "shared", dofile, ".lua", library)
 --load non-xsm mods
-local _ = library["INIT"] ~= "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. library["INIT"])
+local _ = library["INIT"] ~= "lua" and library["dopath"](srcpath .. library["INIT"], dofile, ".lua", library)
+
 --if runing in raw lua, build docs
-local _ = library["INIT"] == "lua" and library["dopath"](modpath .. DIR_DELIM .. "src" .. DIR_DELIM .. "build")
+local _ = library["INIT"] == "lua" and library["dopath"](srcpath .. "build", dofile, ".lua", library)
+local _ = library["INIT"] == "server"
+	and library["dopath"](srcpath .. "testing", dofile, ".lua", library)
 --[[ === === === end = === === === ]] --
