@@ -1,1 +1,1 @@
-return {files={"¯.lua"},folders={"build","client","server","shared"}}
+return {files={"¯.lua"},folders={"build","client","server","shared","testing"}}
