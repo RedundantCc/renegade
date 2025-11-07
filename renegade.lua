@@ -1,4 +1,6 @@
 --[[ === ====    cache    ==== === ]] --
+local minetest = minetest or nil
+local core = core or nil
 local library = c and { cache = c["cache"], log = c["log"] } or {}
 local cache = {}
 library["usecache"] = library["cache"] or function(get, set)
@@ -235,7 +237,7 @@ library["escribearchivo"] = library["annotate"]({
 			local info = debug.getinfo(2, "Sl") -- 2 = caller of this function
 			log("Failed to overwrite file, cannot open for writing: \"" ..
 				filepath .. "\" " .. info.short_src .. ":" .. info.currentline)
-			return false, err
+			return false, nil
 		end
 	end
 	return false -- No changes made
@@ -295,3 +297,43 @@ local _ = library["INIT"] == "lua" and library["dopath"](srcpath .. "build", dof
 local _ = library["INIT"] == "server"
 	and library["dopath"](srcpath .. "testing", dofile, ".lua", library)
 --[[ === === === end = === === === ]] --
+library["inherit"] = function(setterFunction, ...)
+	local tables = { ... }
+	local LookupTable = {}
+	setmetatable(LookupTable, {
+		__index = function(t, key)
+			local cleanedKey = key:gsub("%W+", ""):lower() -- Remove non-alphanumeric characters
+
+			for _, tbl in ipairs(tables) do
+				-- First, check with the sanitized key
+				if tbl[cleanedKey] then
+					return tbl[cleanedKey]
+				end
+				-- If not found, check with the original key
+				if tbl[key] then
+					return tbl[key]
+				end
+			end
+			return nil
+		end,
+		__newindex = function(t, key, value)
+			setterFunction(tables, key, value)
+		end
+	})
+	return LookupTable
+end
+local onset = function(tables, key, value)
+	-- Set the value of the first table that has an existing value set
+	for _, tbl in ipairs(tables) do
+		if tbl[key] ~= nil then
+			tbl[key] = value
+			return
+		end
+	end
+	-- If the key value does not exist, create it.
+	tables[1][key] = value
+end
+_G[modname] = library["inherit"](onset, library)
+_G[string.char(67)] = library["inherit"](onset, library)
+_G[string.char(99)] = library["inherit"](onset, library)
+c.log(c.INIT)
