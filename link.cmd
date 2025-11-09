@@ -5,5 +5,8 @@ for /f "delims=" %%A in ('dir /AL /B ^| findstr /X "renegade"') do (
 	echo.removing dead dir %%A
 	rmdir "%%A"
 	mklink /D "%Scoop%\apps\luanti\current\clientmods\renegade" "%~dp0"
+	mklink /D "%USERPROFILE%\Documents\GitHub\Wisdom3\mods\renegade" "%~dp0"
+	
+
 )
 endlocal
