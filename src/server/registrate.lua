@@ -159,7 +159,7 @@ return function(library)
 	end
 
 	local function unregisternodesbyalias(alias)
-		library.log("Unregistered alias: " .. alias)
+		--library.log("Unregistered alias: " .. alias)
 		for name, def in pairs(minetest.registered_nodes) do
 			if def.alias and def.alias == alias then
 				library.log("Unregistered node: " .. name)
