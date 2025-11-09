@@ -23,7 +23,7 @@ library["getmoddata"] = function(modguid)
 	cache[modguid .. "_modpath"] = modpath
 	local DIR_DELIM = DIR_DELIM or modpath and modpath:match("[\\/]") or "/"
 
-	assert(modname ~= nil and modname ~= nil) -- and DIR_DELIM ~= nil
+	assert(modname ~= nil and modpath ~= nil) -- and DIR_DELIM ~= nil
 	return cache[modname .. "_modname"], cache[modname .. "_modpath"], DIR_DELIM
 end
 local modname, modpath, DIR_DELIM = library.getmoddata("renegade")
