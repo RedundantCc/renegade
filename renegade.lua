@@ -336,4 +336,4 @@ end
 _G[modname] = library["inherit"](onset, library)
 _G[string.char(67)] = library["inherit"](onset, library)
 _G[string.char(99)] = library["inherit"](onset, library)
-c.log(c.INIT)
+--c.log(c.INIT)
