@@ -259,7 +259,7 @@ library["dopath"] = library["annotate"]({
 	function(path, fn, ext, ...)
 		ext = ext or ".lua"
 		fn = fn or dofile
-		local _ = path ~= nil or error("")
+		local _ = path ~= nil or error("oh no, nil path")
 		local returns = {}
 		for _, v in library["spairs"](library.index(path).files) do
 			if v:match(ext:gsub("(%p)", "%%%1") .. "$") ~= nil and v ~= "¯.lua" then
