@@ -1,1 +1,1 @@
-return {files={"registrate.lua","wisgame2.lua","¯.lua"},folders={"wisgame2"}}
+return {files={"mod.conf","registrate.lua","wisgame2.lua","¯.lua"},folders={"wisgame2"}}

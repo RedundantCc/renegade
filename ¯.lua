@@ -1,1 +1,1 @@
-return {files={".gitignore","init.lua","LICENSE","link.cmd","mod.conf","renegade.geany","renegade.lua","¯.lua"},folders={".git",".github",".init","src"}}
+return {files={".git",".gitignore","init.lua","LICENSE","link.cmd","mod.conf","renegade.lua","¯.lua"},folders={".github",".init","src"}}
