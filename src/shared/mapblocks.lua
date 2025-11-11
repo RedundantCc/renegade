@@ -13,7 +13,7 @@ return function(library)
 	
 		return vector.new(min_x, min_y, min_z), vector.new(max_x, max_y, max_z)
 	end	
-	function calculate_chunk_index(position)
+	library["positiontochunkindex"] = function (position)
 	    local chunk_size = 16
 	    local chunk_index_x = math.floor(position[1] / chunk_size)
 	    local chunk_index_y = math.floor(position[2] / chunk_size)
